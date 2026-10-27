@@ -1,0 +1,731 @@
+{% extends "base.html" %}
+{% block title %}Dashboard Dinamico - Metricas y KPIs{% endblock %}
+{% block breadcrumb %}
+    <span class="text-muted">Analitica</span>
+    <i class="bi bi-chevron-right mx-1 text-muted" style="font-size:0.75rem;"></i>Dashboard
+{% endblock %}
+
+{% block content %}
+<!-- Barra superior del Dashboard -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+        <h4 class="fw-bold mb-0" style="color:var(--color-primario);">Dashboard Dinamico de Proyectos</h4>
+        <small class="text-muted">
+            Monitoreo en tiempo real de NPS, avance percibido y proyectos en riesgo.
+        </small>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-light text-secondary border p-2" id="syncStatus">
+            <i class="bi bi-arrow-repeat spin-icon me-1 text-primary" id="syncIcon"></i>
+            <span id="syncText">Sincronizado</span> (<span id="syncTime">--:--:--</span>)
+        </span>
+
+        <div class="input-group input-group-sm" style="width: auto;">
+            <label class="input-group-text bg-white" for="selIntervalo">
+                <i class="bi bi-clock-history me-1"></i>Refresco
+            </label>
+            <select class="form-select form-select-sm" id="selIntervalo" onchange="cambiarIntervalo(this.value)">
+                <option value="0">Manual</option>
+                <option value="15000">Cada 15s</option>
+                <option value="30000" selected>Cada 30s</option>
+                <option value="60000">Cada 60s</option>
+            </select>
+        </div>
+
+        <button class="btn btn-sm btn-outline-primary" onclick="cargarMetricas()" title="Actualizar ahora">
+            <i class="bi bi-arrow-clockwise me-1"></i>Actualizar
+        </button>
+    </div>
+</div>
+
+<!-- Barra de Filtros Dinamicos -->
+<div class="card mb-4 border-0 shadow-sm" style="background:#fdfdfe; border:1px solid #e2e8f0 !important;">
+    <div class="card-body p-3">
+        <form id="formFiltros" class="row g-2 align-items-end" onsubmit="event.preventDefault(); cargarMetricas();">
+            <div class="col-md-3">
+                <label class="form-label text-muted mb-1" style="font-size:0.78rem;">Proyecto</label>
+                <select class="form-select form-select-sm" id="filtroProyecto" onchange="cargarMetricas()">
+                    <option value="">Todos los proyectos</option>
+                    {% for p in proyectos %}
+                    <option value="{{ p.id }}">{{ p.nombre }} ({{ p.anio }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label text-muted mb-1" style="font-size:0.78rem;">Responsable</label>
+                <select class="form-select form-select-sm" id="filtroResponsable" onchange="cargarMetricas()">
+                    <option value="">Todos los docentes</option>
+                    {% for r in responsables %}
+                    <option value="{{ r.id }}">{{ r.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label text-muted mb-1" style="font-size:0.78rem;">Encuesta</label>
+                <select class="form-select form-select-sm" id="filtroEncuesta" onchange="cargarMetricas()">
+                    <option value="">Todas las encuestas</option>
+                    {% for e in encuestas %}
+                    <option value="{{ e.id }}">{{ e.titulo }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label text-muted mb-1" style="font-size:0.78rem;">Fecha Desde</label>
+                <input type="date" class="form-control form-control-sm" id="filtroDesde" onchange="cargarMetricas()">
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label text-muted mb-1" style="font-size:0.78rem;">Fecha Hasta</label>
+                <input type="date" class="form-control form-control-sm" id="filtroHasta" onchange="cargarMetricas()">
+            </div>
+
+            <div class="col-md-1 d-flex gap-1">
+                <button type="button" class="btn btn-sm btn-light border w-100" onclick="limpiarFiltros()" title="Restablecer filtros">
+                    <i class="bi bi-x-circle"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Fila de Tarjetas de KPI -->
+<div class="row g-3 mb-4">
+    <!-- KPI 1: NPS -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm h-100 kpi-card">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="text-muted text-uppercase fw-semibold" style="font-size:0.72rem; letter-spacing:0.5px;">
+                            Indice NPS
+                        </span>
+                        <h3 class="fw-bold my-1" id="kpiNps" style="color:var(--color-primario);">0.0</h3>
+                    </div>
+                    <div class="kpi-icon-box bg-primary-subtle text-primary rounded-3 p-2">
+                        <i class="bi bi-star-fill" style="font-size:1.2rem;"></i>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-1 mt-2" style="font-size:0.75rem;">
+                    <span class="text-success fw-semibold" id="kpiPromotores">0% Prom.</span>
+                    <span class="text-muted">|</span>
+                    <span class="text-secondary" id="kpiPasivos">0% Pas.</span>
+                    <span class="text-muted">|</span>
+                    <span class="text-danger fw-semibold" id="kpiDetractores">0% Detr.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI 2: Avance Percibido -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm h-100 kpi-card">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="text-muted text-uppercase fw-semibold" style="font-size:0.72rem; letter-spacing:0.5px;">
+                            Avance Percibido
+                        </span>
+                        <h3 class="fw-bold my-1 text-success" id="kpiAvance">0.0%</h3>
+                    </div>
+                    <div class="kpi-icon-box bg-success-subtle text-success rounded-3 p-2">
+                        <i class="bi bi-speedometer2" style="font-size:1.2rem;"></i>
+                    </div>
+                </div>
+                <div class="progress mt-2" style="height: 5px;">
+                    <div class="progress-bar bg-success" id="kpiAvanceBar" role="progressbar" style="width: 0%"></div>
+                </div>
+                <small class="text-muted d-block mt-2" style="font-size:0.72rem;">Promedio general en encuestas</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI 3: Cumplimiento -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm h-100 kpi-card">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="text-muted text-uppercase fw-semibold" style="font-size:0.72rem; letter-spacing:0.5px;">
+                            Cumplimiento
+                        </span>
+                        <h3 class="fw-bold my-1 text-info" id="kpiCumplimiento">0.0%</h3>
+                    </div>
+                    <div class="kpi-icon-box bg-info-subtle text-info rounded-3 p-2">
+                        <i class="bi bi-check2-circle" style="font-size:1.2rem;"></i>
+                    </div>
+                </div>
+                <div class="progress mt-2" style="height: 5px;">
+                    <div class="progress-bar bg-info" id="kpiCumplimientoBar" role="progressbar" style="width: 0%"></div>
+                </div>
+                <small class="text-muted d-block mt-2" style="font-size:0.72rem;">Respuestas vs objetivo esperado</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI 4: Participacion -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm h-100 kpi-card">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="text-muted text-uppercase fw-semibold" style="font-size:0.72rem; letter-spacing:0.5px;">
+                            Participacion
+                        </span>
+                        <h3 class="fw-bold my-1 text-warning" id="kpiParticipacion">0.0%</h3>
+                    </div>
+                    <div class="kpi-icon-box bg-warning-subtle text-warning rounded-3 p-2">
+                        <i class="bi bi-people" style="font-size:1.2rem;"></i>
+                    </div>
+                </div>
+                <small class="text-muted d-block mt-3" style="font-size:0.75rem;">
+                    <strong id="kpiTotalResp">0</strong> respuestas de <strong id="kpiTotalDist">0</strong> invitaciones
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Fila 1 de Graficos: Barras (Avance por Proyecto) y Dona (Distribucion NPS) -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h6 class="fw-semibold mb-0">Avance Percibido y Satisfaccion por Proyecto</h6>
+                <small class="text-muted">Escala porcentual (0 - 100%)</small>
+            </div>
+            <div class="card-body p-3">
+                <div style="height: 280px; position: relative;">
+                    <canvas id="chartBarras"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h6 class="fw-semibold mb-0">Distribucion de Segmentos NPS</h6>
+                <small class="text-muted">Proporcion</small>
+            </div>
+            <div class="card-body p-3 d-flex flex-column align-items-center justify-content-center">
+                <div style="height: 220px; width: 100%; position: relative;">
+                    <canvas id="chartDona"></canvas>
+                </div>
+                <div class="d-flex justify-content-around w-100 mt-3 pt-2 border-top text-center" style="font-size:0.78rem;">
+                    <div><span class="badge bg-success mb-1">Promotores</span><div id="donaPromCount">0</div></div>
+                    <div><span class="badge bg-secondary mb-1">Pasivos</span><div id="donaPasCount">0</div></div>
+                    <div><span class="badge bg-danger mb-1">Detractores</span><div id="donaDetCount">0</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Fila 2 de Graficos: Tendencia Temporal y Mapa de Calor -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h6 class="fw-semibold mb-0">Tendencia de Respuestas y Avance</h6>
+                <small class="text-muted">Evolucion en el tiempo</small>
+            </div>
+            <div class="card-body p-3">
+                <div style="height: 260px; position: relative;">
+                    <canvas id="chartLineas"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mapa de Calor (Heatmap Matriz de Dimensiones) -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h6 class="fw-semibold mb-0">Mapa de Calor: Percepcion por Dimension</h6>
+                <small class="text-muted">Escala 1 (Bajo) a 5 (Excelente)</small>
+            </div>
+            <div class="card-body p-3 table-responsive">
+                <table class="table table-sm table-bordered align-middle text-center mb-0" id="tablaHeatmap" style="font-size:0.8rem;">
+                    <thead class="table-light">
+                        <tr id="headerHeatmap">
+                            <th class="text-start">Proyecto</th>
+                            <th>Avance</th>
+                            <th>Calidad</th>
+                            <th>Comunicacion</th>
+                            <th>Cumplimiento</th>
+                            <th>Recomendacion</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bodyHeatmap">
+                        <tr><td colspan="6" class="text-muted py-3">Cargando mapa de calor...</td></tr>
+                    </tbody>
+                </table>
+                <div class="d-flex justify-content-end align-items-center gap-2 mt-2" style="font-size:0.72rem;">
+                    <span>Referencia:</span>
+                    <span class="badge" style="background:#f8d7da; color:#842029;">1.0 - 2.9 Critico</span>
+                    <span class="badge" style="background:#fff3cd; color:#664d03;">3.0 - 3.9 Moderado</span>
+                    <span class="badge" style="background:#d1e7dd; color:#0f5132;">4.0 - 5.0 Optimo</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Fila 3: Semaforo de Proyectos en Riesgo -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <div>
+            <h6 class="fw-semibold mb-0">Semaforo de Proyectos en Riesgo</h6>
+            <small class="text-muted">Evaluacion integral de salud de proyectos segun umbrales de NPS, avance percibido y participacion</small>
+        </div>
+        <div class="d-flex gap-2">
+            <span class="badge bg-success-subtle text-success border border-success-subtle" id="countVerdes">0 Saludables</span>
+            <span class="badge bg-warning-subtle text-warning border border-warning-subtle" id="countAmarillos">0 Alerta</span>
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle" id="countRojos">0 Criticos</span>
+        </div>
+    </div>
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-hover align-middle mb-0" style="font-size:0.83rem;">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 80px;" class="text-center">Estado</th>
+                    <th>Proyecto</th>
+                    <th>Docente Responsable</th>
+                    <th class="text-center">NPS</th>
+                    <th class="text-center">Avance</th>
+                    <th class="text-center">Respuestas</th>
+                    <th>Diagnostico</th>
+                    <th class="text-end pe-3">Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="bodySemaforo">
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">Cargando evaluacion de proyectos...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- Chart.js oficial para visualizaciones analiticas -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<script>
+// ============================================================
+// VARIABLES GLOBALES Y REFERENCIAS A GRAFICOS
+// ============================================================
+let chartBarrasInst = null;
+let chartDonaInst = null;
+let chartLineasInst = null;
+let timerRefresco = null;
+
+// ============================================================
+// CARGA ASINCRONA DE METRICAS (AJAX / FETCH)
+// ============================================================
+async function cargarMetricas() {
+    const syncStatus = document.getElementById('syncStatus');
+    const syncIcon = document.getElementById('syncIcon');
+    const syncText = document.getElementById('syncText');
+    const syncTime = document.getElementById('syncTime');
+
+    if (syncIcon) syncIcon.classList.add('spin-active');
+    if (syncText) syncText.textContent = 'Actualizando...';
+
+    // Parametros de filtro
+    const params = new URLSearchParams();
+    const pId = document.getElementById('filtroProyecto').value;
+    const rId = document.getElementById('filtroResponsable').value;
+    const eId = document.getElementById('filtroEncuesta').value;
+    const fDesde = document.getElementById('filtroDesde').value;
+    const fHasta = document.getElementById('filtroHasta').value;
+
+    if (pId) params.append('proyecto_id', pId);
+    if (rId) params.append('responsable_id', rId);
+    if (eId) params.append('encuesta_id', eId);
+    if (fDesde) params.append('desde', fDesde);
+    if (fHasta) params.append('hasta', fHasta);
+
+    try {
+        const resp = await fetch(`/dashboard/api/datos?${params.toString()}`);
+        if (!resp.ok) throw new Error('Error en el servidor al consultar metricas');
+        const data = await resp.json();
+
+        if (data.ok) {
+            actualizarKPIs(data.kpis);
+            actualizarGraficos(data.graficos);
+            actualizarMapaCalor(data.mapa_calor);
+            actualizarSemaforo(data.semaforo);
+
+            if (syncTime) syncTime.textContent = data.timestamp || new Date().toLocaleTimeString();
+            if (syncText) syncText.textContent = 'Sincronizado';
+        }
+    } catch (err) {
+        console.error('Error al obtener datos del dashboard:', err);
+        if (syncText) syncText.textContent = 'Error al sincronizar';
+    } finally {
+        if (syncIcon) syncIcon.classList.remove('spin-active');
+    }
+}
+
+// ============================================================
+// ACTUALIZACION DE KPIS
+// ============================================================
+function actualizarKPIs(kpis) {
+    if (!kpis) return;
+
+    // NPS
+    const npsEl = document.getElementById('kpiNps');
+    if (npsEl) {
+        npsEl.textContent = (kpis.nps > 0 ? '+' : '') + kpis.nps;
+        npsEl.className = 'fw-bold my-1 ' + (kpis.nps >= 30 ? 'text-success' : (kpis.nps >= 0 ? 'text-primary' : 'text-danger'));
+    }
+    const promEl = document.getElementById('kpiPromotores');
+    if (promEl) promEl.textContent = `${kpis.nps_promotores_pct}% Prom.`;
+    const pasEl = document.getElementById('kpiPasivos');
+    if (pasEl) pasEl.textContent = `${kpis.nps_pasivos_pct}% Pas.`;
+    const detEl = document.getElementById('kpiDetractores');
+    if (detEl) detEl.textContent = `${kpis.nps_detractores_pct}% Detr.`;
+
+    // Avance Percibido
+    const avEl = document.getElementById('kpiAvance');
+    const avBar = document.getElementById('kpiAvanceBar');
+    if (avEl) avEl.textContent = `${kpis.avance_promedio}%`;
+    if (avBar) avBar.style.width = `${Math.min(100, Math.max(0, kpis.avance_promedio))}%`;
+
+    // Cumplimiento
+    const cumpEl = document.getElementById('kpiCumplimiento');
+    const cumpBar = document.getElementById('kpiCumplimientoBar');
+    if (cumpEl) cumpEl.textContent = `${kpis.cumplimiento}%`;
+    if (cumpBar) cumpBar.style.width = `${Math.min(100, Math.max(0, kpis.cumplimiento))}%`;
+
+    // Participacion
+    const partEl = document.getElementById('kpiParticipacion');
+    if (partEl) partEl.textContent = `${kpis.participacion}%`;
+    const totalRespEl = document.getElementById('kpiTotalResp');
+    if (totalRespEl) totalRespEl.textContent = kpis.total_respuestas;
+    const totalDistEl = document.getElementById('kpiTotalDist');
+    if (totalDistEl) totalDistEl.textContent = kpis.total_distribuciones;
+}
+
+// ============================================================
+// ACTUALIZACION DE GRAFICOS (CHART.JS)
+// ============================================================
+function actualizarGraficos(graficos) {
+    if (!graficos) return;
+
+    // 1. Barras: Avance y Satisfaccion
+    const ctxBarras = document.getElementById('chartBarras').getContext('2d');
+    const labelsBarras = graficos.barras.labels.length ? graficos.barras.labels : ['Sin proyectos'];
+    const avanceData = graficos.barras.avance.length ? graficos.barras.avance : [0];
+    const satisfaccionData = graficos.barras.satisfaccion.length ? graficos.barras.satisfaccion : [0];
+
+    if (chartBarrasInst) {
+        chartBarrasInst.data.labels = labelsBarras;
+        chartBarrasInst.data.datasets[0].data = avanceData;
+        chartBarrasInst.data.datasets[1].data = satisfaccionData;
+        chartBarrasInst.update();
+    } else {
+        chartBarrasInst = new Chart(ctxBarras, {
+            type: 'bar',
+            data: {
+                labels: labelsBarras,
+                datasets: [
+                    {
+                        label: '% Avance Percibido',
+                        data: avanceData,
+                        backgroundColor: '#198754',
+                        borderRadius: 4,
+                    },
+                    {
+                        label: '% Satisfaccion Global',
+                        data: satisfaccionData,
+                        backgroundColor: '#0d6efd',
+                        borderRadius: 4,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: { callback: v => v + '%' }
+                    }
+                },
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    }
+
+    // 2. Dona: NPS
+    const ctxDona = document.getElementById('chartDona').getContext('2d');
+    const donaData = graficos.dona.data.some(v => v > 0) ? graficos.dona.data : [1, 0, 0];
+    const donaColors = ['#198754', '#6c757d', '#dc3545'];
+
+    document.getElementById('donaPromCount').textContent = graficos.dona.data[0];
+    document.getElementById('donaPasCount').textContent = graficos.dona.data[1];
+    document.getElementById('donaDetCount').textContent = graficos.dona.data[2];
+
+    if (chartDonaInst) {
+        chartDonaInst.data.datasets[0].data = donaData;
+        chartDonaInst.update();
+    } else {
+        chartDonaInst = new Chart(ctxDona, {
+            type: 'doughnut',
+            data: {
+                labels: ['Promotores', 'Pasivos', 'Detractores'],
+                datasets: [{
+                    data: donaData,
+                    backgroundColor: donaColors,
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                cutout: '65%'
+            }
+        });
+    }
+
+    // 3. Lineas: Tendencia Temporal
+    const ctxLineas = document.getElementById('chartLineas').getContext('2d');
+    const lineasLabels = graficos.lineas.labels;
+    const lineasRespuestas = graficos.lineas.respuestas;
+    const lineasAvances = graficos.lineas.avances;
+
+    if (chartLineasInst) {
+        chartLineasInst.data.labels = lineasLabels;
+        chartLineasInst.data.datasets[0].data = lineasRespuestas;
+        chartLineasInst.data.datasets[1].data = lineasAvances;
+        chartLineasInst.update();
+    } else {
+        chartLineasInst = new Chart(ctxLineas, {
+            type: 'line',
+            data: {
+                labels: lineasLabels,
+                datasets: [
+                    {
+                        label: 'Cant. Respuestas',
+                        data: lineasRespuestas,
+                        borderColor: '#0d6efd',
+                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: '% Avance Promedio',
+                        data: lineasAvances,
+                        borderColor: '#198754',
+                        backgroundColor: 'transparent',
+                        borderDash: [5, 5],
+                        tension: 0.3,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Respuestas' }
+                    },
+                    y1: {
+                        beginAtZero: true,
+                        max: 100,
+                        position: 'right',
+                        title: { display: true, text: '% Avance' },
+                        grid: { drawOnChartArea: false }
+                    }
+                },
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    }
+}
+
+// ============================================================
+// ACTUALIZACION DE MAPA DE CALOR (HEATMAP)
+// ============================================================
+function actualizarMapaCalor(heatmap) {
+    const tbody = document.getElementById('bodyHeatmap');
+    if (!tbody || !heatmap) return;
+
+    if (!heatmap.filas || heatmap.filas.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-muted py-3">No hay datos suficientes para el mapa de calor.</td></tr>';
+        return;
+    }
+
+    let html = '';
+    heatmap.filas.forEach(f => {
+        html += `<tr>
+            <td class="text-start fw-semibold">${f.proyecto_nombre}</td>`;
+        f.celdas.forEach(c => {
+            const valTexto = c.valor !== null ? c.valor.toFixed(1) : '-';
+            html += `<td style="background-color:${c.color_fondo}; color:${c.color_texto}; font-weight:600;">
+                ${valTexto}
+            </td>`;
+        });
+        html += `</tr>`;
+    });
+    tbody.innerHTML = html;
+}
+
+// ============================================================
+// ACTUALIZACION DEL SEMAFORO DE PROYECTOS EN RIESGO
+// ============================================================
+function actualizarSemaforo(semaforo) {
+    const tbody = document.getElementById('bodySemaforo');
+    if (!tbody || !semaforo) return;
+
+    let cVerde = 0;
+    let cAmarillo = 0;
+    let cRojo = 0;
+
+    if (semaforo.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No hay proyectos registrados.</td></tr>';
+        return;
+    }
+
+    let html = '';
+    semaforo.forEach(p => {
+        let badgeColor = 'bg-secondary';
+        let badgeLabel = 'Desconocido';
+        let iconClass = 'bi-circle-fill';
+
+        if (p.nivel === 'verde') {
+            cVerde++;
+            badgeColor = 'bg-success';
+            badgeLabel = 'Saludable';
+            iconClass = 'bi-check-circle-fill text-success';
+        } else if (p.nivel === 'amarillo') {
+            cAmarillo++;
+            badgeColor = 'bg-warning text-dark';
+            badgeLabel = 'Alerta';
+            iconClass = 'bi-exclamation-triangle-fill text-warning';
+        } else if (p.nivel === 'rojo') {
+            cRojo++;
+            badgeColor = 'bg-danger';
+            badgeLabel = 'Critico';
+            iconClass = 'bi-x-circle-fill text-danger';
+        }
+
+        html += `<tr>
+            <td class="text-center">
+                <i class="bi ${iconClass}" style="font-size:1.1rem;" title="${badgeLabel}"></i>
+            </td>
+            <td>
+                <strong>${p.nombre}</strong>
+                <div class="text-muted" style="font-size:0.75rem;">Ano ${p.anio}</div>
+            </td>
+            <td>${p.responsables}</td>
+            <td class="text-center fw-semibold ${p.nps >= 30 ? 'text-success' : (p.nps >= 0 ? 'text-primary' : 'text-danger')}">
+                ${p.nps > 0 ? '+' : ''}${p.nps}
+            </td>
+            <td class="text-center fw-semibold">
+                ${p.avance}%
+            </td>
+            <td class="text-center">
+                <span class="badge bg-light text-dark border">${p.respuestas}</span>
+            </td>
+            <td>
+                <span class="badge ${badgeColor}">${badgeLabel}</span>
+                <small class="text-muted d-block mt-1">${p.motivo}</small>
+            </td>
+            <td class="text-end pe-3">
+                <button class="btn btn-sm btn-outline-primary" onclick="aislarProyecto(${p.id})" title="Filtrar en dashboard">
+                    <i class="bi bi-funnel me-1"></i>Filtrar
+                </button>
+            </td>
+        </tr>`;
+    });
+
+    tbody.innerHTML = html;
+    document.getElementById('countVerdes').textContent = `${cVerde} Saludables`;
+    document.getElementById('countAmarillos').textContent = `${cAmarillo} Alerta`;
+    document.getElementById('countRojos').textContent = `${cRojo} Criticos`;
+}
+
+// ============================================================
+// ACCIONES DE FILTRO E INTERVALO
+// ============================================================
+function aislarProyecto(id) {
+    document.getElementById('filtroProyecto').value = id;
+    cargarMetricas();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function limpiarFiltros() {
+    document.getElementById('formFiltros').reset();
+    cargarMetricas();
+}
+
+function cambiarIntervalo(ms) {
+    if (timerRefresco) {
+        clearInterval(timerRefresco);
+        timerRefresco = null;
+    }
+    const val = parseInt(ms, 10);
+    if (val > 0) {
+        timerRefresco = setInterval(cargarMetricas, val);
+    }
+}
+
+// ============================================================
+// INICIALIZACION
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+    cargarMetricas();
+    // Iniciar intervalo predeterminado de 30 segundos
+    cambiarIntervalo(30000);
+});
+</script>
+
+<style>
+.kpi-card {
+    transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+.kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important;
+}
+.kpi-icon-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+}
+.spin-icon {
+    display: inline-block;
+    transition: transform 0.3s;
+}
+.spin-active {
+    animation: spinAnimation 1s linear infinite;
+}
+@keyframes spinAnimation {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+</style>
+{% endblock %}
+

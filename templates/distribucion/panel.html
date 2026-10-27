@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+
+{% block title %}Distribucion - {{ encuesta.titulo }}{% endblock %}
+{% block breadcrumb %}
+    <a href="{{ url_for('encuestas.listar') }}" class="text-decoration-none text-muted">Encuestas</a>
+    <i class="bi bi-chevron-right mx-1 text-muted" style="font-size:0.75rem;"></i>
+    Distribucion y Control
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h5 class="fw-bold mb-0" style="color:var(--color-primario);">Distribucion y Control de Respuestas</h5>
+        <p class="text-muted mb-0" style="font-size:0.85rem;">
+            Encuesta: <strong>{{ encuesta.titulo }}</strong>
+            {% if encuesta.proyecto %} | Proyecto: <strong>{{ encuesta.proyecto.nombre }}</strong>{% endif %}
+            | Estado: <span class="badge {% if encuesta.estado == 'publicada' %}bg-success{% elif encuesta.estado == 'borrador' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">{{ encuesta.estado | capitalize }}</span>
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('encuestas.editor', id=encuesta.id) }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-pencil-square me-1"></i>Editor de Preguntas
+        </a>
+        <a href="{{ url_for('encuestas.preview', id=encuesta.id) }}" class="btn btn-sm btn-outline-secondary" target="_blank">
+            <i class="bi bi-eye me-1"></i>Vista Previa
+        </a>
+    </div>
+</div>
+
+{% if encuesta.estado != 'publicada' %}
+<div class="alert alert-warning d-flex align-items-center mb-4 shadow-sm" role="alert">
+    <i class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2 fs-5"></i>
+    <div>
+        <strong>Atencion:</strong> Esta encuesta se encuentra en estado <strong>{{ encuesta.estado | capitalize }}</strong>. Para que los respondentes puedan enviar sus formularios a traves del enlace publico o tokens unicos, debe cambiar su estado a <strong>Publicada</strong> desde el editor.
+    </div>
+</div>
+{% endif %}
+
+<!-- Tarjetas de Metricas de Distribucion -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#e8f0fe;">
+                <i class="bi bi-people" style="color:#1a3a5c;"></i>
+            </div>
+            <div>
+                <div class="stat-value">{{ total_destinatarios }}</div>
+                <div class="stat-label">Destinatarios Unicos</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#d1fae5;">
+                <i class="bi bi-check2-all" style="color:#065f46;"></i>
+            </div>
+            <div>
+                <div class="stat-value">{{ respondidas }}</div>
+                <div class="stat-label">Respuestas Recibidas</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#fff3cd;">
+                <i class="bi bi-hourglass-split" style="color:#856404;"></i>
+            </div>
+            <div>
+                <div class="stat-value">{{ pendientes }}</div>
+                <div class="stat-label">Pendientes de Envio / Llenado</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#f3f4f6;">
+                <i class="bi bi-pie-chart" style="color:#374151;"></i>
+            </div>
+            <div>
+                <div class="stat-value">{{ tasa_respuesta }}%</div>
+                <div class="stat-label">Tasa de Respuesta</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Canal 1: Enlace Publico y Codigo QR -->
+    <div class="col-lg-5">
+        <div class="tabla-panel h-100">
+            <div class="tabla-header">
+                <h6><i class="bi bi-qr-code me-2"></i>Acceso Publico y Codigo QR</h6>
+            </div>
+            <div class="p-3">
+                <p class="text-muted mb-3" style="font-size:0.82rem;">
+                    Utilice este canal para divulgar la encuesta en presentaciones, carteleras o canales generales. No requiere token individual.
+                </p>
+
+                <div class="text-center p-3 mb-3 border rounded" style="background:#fafafa;">
+                    <img src="{{ url_for('distribucion.qr_code', encuesta_id=encuesta.id) }}"
+                         alt="Codigo QR"
+                         style="max-width:160px; height:auto; display:inline-block;"
+                         class="border p-2 bg-white rounded shadow-sm">
+                    <div class="mt-3 d-flex justify-content-center gap-2">
+                        <a href="{{ url_for('distribucion.qr_code', encuesta_id=encuesta.id, download=1) }}"
+                           class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-download me-1"></i>Descargar QR (SVG)
+                        </a>
+                        <a href="{{ url_publica }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>Abrir
+                        </a>
+                    </div>
+                </div>
+
+                <label class="form-label">Enlace Directo</label>
+                <div class="input-group mb-2">
+                    <input type="text" id="inputUrlPublica" class="form-control form-control-sm"
+                           value="{{ url_publica }}" readonly>
+                    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="copiarTexto('inputUrlPublica')">
+                        <i class="bi bi-clipboard me-1"></i>Copiar
+                    </button>
+                </div>
+                <div class="form-text" style="font-size:0.75rem;">
+                    Anonimato: {% if encuesta.anonima %}<span class="text-success fw-semibold">Activado (Respuestas anonimas)</span>{% else %}<span class="text-muted">Desactivado (Se solicita identificacion)</span>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Canal 2: Acciones de Envio y Recordatorios Masivos -->
+    <div class="col-lg-7">
+        <div class="tabla-panel h-100">
+            <div class="tabla-header d-flex justify-content-between align-items-center">
+                <h6><i class="bi bi-send-check me-2"></i>Gestion de Envios y Recordatorios</h6>
+                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregarDestinatario">
+                    <i class="bi bi-person-plus me-1"></i>Agregar Destinatario
+                </button>
+            </div>
+            <div class="p-3">
+                <p class="text-muted mb-3" style="font-size:0.82rem;">
+                    Los envios individuales generan enlaces unicos e intransferibles para cada persona. Esto permite asegurar que cada invitado responda una sola vez.
+                </p>
+
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <form method="POST" action="{{ url_for('distribucion.enviar_invitaciones', encuesta_id=encuesta.id) }}">
+                        <button type="submit" class="btn btn-sm btn-outline-primary" {% if pendientes == 0 %}disabled{% endif %}>
+                            <i class="bi bi-envelope-at me-1"></i>Enviar Invitacion a Pendientes ({{ pendientes }})
+                        </button>
+                    </form>
+
+                    <form method="POST" action="{{ url_for('distribucion.enviar_recordatorios', encuesta_id=encuesta.id) }}">
+                        <button type="submit" class="btn btn-sm btn-outline-warning text-dark" {% if pendientes == 0 %}disabled{% endif %}>
+                            <i class="bi bi-bell me-1"></i>Enviar Recordatorio a Todos los Pendientes
+                        </button>
+                    </form>
+                </div>
+
+                <hr class="my-3">
+
+                <h6 class="fw-semibold mb-2" style="font-size:0.82rem; color:var(--color-primario);">
+                    Registro Reciente de Actividad de Correos
+                </h6>
+                {% if ultimos_logs %}
+                <div class="border rounded p-2" style="background:#f8f9fa; font-family:monospace; font-size:0.75rem; max-height:150px; overflow-y:auto;">
+                    {% for l in ultimos_logs %}
+                    <div class="mb-1 text-truncate" title="{{ l }}">{{ l }}</div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted mb-0" style="font-size:0.78rem;">No se registran envios todavia en esta sesion.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de Control de Destinatarios y Respuestas -->
+<div class="tabla-panel mb-4">
+    <div class="tabla-header d-flex justify-content-between align-items-center">
+        <h6><i class="bi bi-list-check me-2"></i>Lista de Control de Respuestas ({{ total_destinatarios }})</h6>
+    </div>
+    {% if distribuciones %}
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Destinatario</th>
+                    <th>Correo</th>
+                    <th>Estado</th>
+                    <th>Fecha Envio</th>
+                    <th>Recordatorios</th>
+                    <th>Fecha Respuesta</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in distribuciones %}
+                <tr>
+                    <td class="fw-semibold">{{ d.destinatario_nombre or 'Sin nombre' }}</td>
+                    <td>{{ d.destinatario_email }}</td>
+                    <td>
+                        {% if d.estado == 'respondida' %}
+                            <span class="badge-activo"><i class="bi bi-check-circle me-1"></i>Respondida</span>
+                        {% elif d.estado == 'pendiente' %}
+                            <span class="badge-suspendido"><i class="bi bi-clock me-1"></i>Pendiente</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ d.estado | capitalize }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ d.fecha_envio.strftime('%d/%m/%Y %H:%M') if d.fecha_envio else 'No enviado' }}</td>
+                    <td>
+                        {% if d.intentos_recordatorio > 0 %}
+                            <span class="badge bg-light text-dark border">{{ d.intentos_recordatorio }}</span>
+                            <small class="text-muted d-block" style="font-size:0.7rem;">
+                                {{ d.fecha_ultimo_recordatorio.strftime('%d/%m/%Y') if d.fecha_ultimo_recordatorio else '' }}
+                            </small>
+                        {% else %}
+                            <span class="text-muted">0</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ d.fecha_respuesta.strftime('%d/%m/%Y %H:%M') if d.fecha_respuesta else '-' }}</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-secondary"
+                                onclick="copiarLinkIndividual('{{ base_url }}/responder/{{ d.token }}')"
+                                title="Copiar enlace unico">
+                            <i class="bi bi-link-45deg"></i>
+                        </button>
+                        <a href="{{ url_for('distribucion.qr_code', encuesta_id=encuesta.id, token=d.token) }}"
+                           target="_blank"
+                           class="btn btn-sm btn-outline-secondary ms-1"
+                           title="Ver QR individual">
+                            <i class="bi bi-qr-code"></i>
+                        </a>
+                        {% if d.estado == 'pendiente' %}
+                        <form method="POST" action="{{ url_for('distribucion.recordatorio_individual', encuesta_id=encuesta.id, distribucion_id=d.id) }}"
+                              class="d-inline ms-1">
+                            <button type="submit" class="btn btn-sm btn-outline-warning text-dark" title="Enviar recordatorio individual">
+                                <i class="bi bi-bell"></i>
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ url_for('distribucion.eliminar_destinatario', encuesta_id=encuesta.id, distribucion_id=d.id) }}"
+                              class="d-inline ms-1">
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                    data-confirm="Desea quitar a {{ d.destinatario_email }} de la lista de distribucion?"
+                                    title="Eliminar">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+        <i class="bi bi-envelope-paper" style="font-size:2.5rem;opacity:0.3;"></i>
+        <p class="mt-2 mb-0">No se han registrado destinatarios individuales para esta encuesta.</p>
+        <button class="btn btn-sm btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#modalAgregarDestinatario">
+            <i class="bi bi-person-plus me-1"></i>Agregar Primer Destinatario
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal: Agregar Destinatario -->
+<div class="modal fade" id="modalAgregarDestinatario" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title fw-semibold">Agregar Destinatarios a la Distribucion</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('distribucion.agregar_destinatarios', encuesta_id=encuesta.id) }}">
+                <div class="modal-body">
+                    <ul class="nav nav-tabs mb-3" id="tabTipoCarga" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active btn-sm" id="individual-tab" data-bs-toggle="tab" data-bs-target="#tab-individual" type="button">Individual</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link btn-sm" id="lote-tab" data-bs-toggle="tab" data-bs-target="#tab-lote" type="button">En Lote</button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <!-- Tab Individual -->
+                        <div class="tab-pane fade show active" id="tab-individual">
+                            <input type="hidden" name="tipo_carga" value="individual" id="inputTipoCarga">
+                            <div class="mb-3">
+                                <label class="form-label">Nombre y Apellido</label>
+                                <input type="text" name="nombre" class="form-control form-control-sm" placeholder="Ej: Martin Gomez">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Correo Electronico <span class="text-danger">*</span></label>
+                                <input type="email" name="email" class="form-control form-control-sm" placeholder="usuario@institucion.edu">
+                            </div>
+                        </div>
+
+                        <!-- Tab Lote -->
+                        <div class="tab-pane fade" id="tab-lote">
+                            <div class="mb-2">
+                                <label class="form-label">Pegar lista de correos (uno por linea)</label>
+                                <textarea name="bloque_emails" class="form-control form-control-sm" rows="6"
+                                          placeholder="Martin Gomez, martin@institucion.edu&#10;Laura Diaz, laura@institucion.edu&#10;otro_correo@institucion.edu"></textarea>
+                                <small class="text-muted" style="font-size:0.75rem;">
+                                    Formato aceptado: <code>Nombre, correo@dominio</code> o unicamente <code>correo@dominio</code> por renglon.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-sm btn-primary">Registrar y Generar Tokens</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Manejo del tipo de carga
+document.getElementById('lote-tab').addEventListener('click', function() {
+    document.getElementById('inputTipoCarga').value = 'lote';
+});
+document.getElementById('individual-tab').addEventListener('click', function() {
+    document.getElementById('inputTipoCarga').value = 'individual';
+});
+
+function copiarTexto(elementId) {
+    const input = document.getElementById(elementId);
+    input.select();
+    navigator.clipboard.writeText(input.value);
+    alert('Enlace copiado al portapapeles.');
+}
+
+function copiarLinkIndividual(url) {
+    navigator.clipboard.writeText(url);
+    alert('Enlace unico copiado: ' + url);
+}
+</script>
+{% endblock %}
+

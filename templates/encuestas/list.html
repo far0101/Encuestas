@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Encuestas{% endblock %}
+{% block breadcrumb %}Encuestas{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h5 class="fw-bold mb-0" style="color:var(--color-primario);">Encuestas</h5>
+        <p class="text-muted mb-0" style="font-size:0.85rem;">Constructor de encuestas vinculadas a proyectos.</p>
+    </div>
+    <a href="{{ url_for('encuestas.crear') }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>Nueva encuesta
+    </a>
+</div>
+
+<!-- Filtros -->
+<div class="tabla-panel mb-4">
+    <div class="tabla-header"><h6>Filtrar</h6></div>
+    <div class="p-3">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-sm-4">
+                <label class="form-label">Estado</label>
+                <select name="estado" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    <option value="borrador" {% if estado_filtro == 'borrador' %}selected{% endif %}>Borrador</option>
+                    <option value="publicada" {% if estado_filtro == 'publicada' %}selected{% endif %}>Publicada</option>
+                    <option value="cerrada" {% if estado_filtro == 'cerrada' %}selected{% endif %}>Cerrada</option>
+                </select>
+            </div>
+            <div class="col-sm-4 d-flex gap-2">
+                <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel me-1"></i>Aplicar</button>
+                <a href="{{ url_for('encuestas.listar') }}" class="btn btn-sm btn-outline-secondary">Limpiar</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tabla de encuestas -->
+<div class="tabla-panel mb-4">
+    <div class="tabla-header">
+        <h6>{{ encuestas | length }} encuesta(s)</h6>
+    </div>
+    {% if encuestas %}
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Titulo</th>
+                    <th>Proyecto</th>
+                    <th>Estado</th>
+                    <th>Anonima</th>
+                    <th>Preguntas</th>
+                    <th>Creada</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in encuestas %}
+                <tr>
+                    <td class="fw-semibold">{{ e.titulo }}</td>
+                    <td>{{ e.proyecto.nombre if e.proyecto else '-' }}</td>
+                    <td>
+                        {% if e.estado == 'borrador' %}
+                            <span class="badge-suspendido">Borrador</span>
+                        {% elif e.estado == 'publicada' %}
+                            <span class="badge-activo">Publicada</span>
+                        {% else %}
+                            <span class="badge-finalizado">Cerrada</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if e.anonima %}
+                            <i class="bi bi-shield-check text-success"></i> Si
+                        {% else %}
+                            <i class="bi bi-person text-muted"></i> No
+                        {% endif %}
+                    </td>
+                    <td>{{ e.preguntas | length }}</td>
+                    <td>{{ e.created_at.strftime('%d/%m/%Y') }}</td>
+                    <td class="text-end">
+                        <a href="{{ url_for('distribucion.panel', encuesta_id=e.id) }}"
+                           class="btn btn-sm btn-outline-success" title="Distribucion y Control de Respuestas">
+                            <i class="bi bi-send-check"></i>
+                        </a>
+                        <a href="{{ url_for('encuestas.editor', id=e.id) }}"
+                           class="btn btn-sm btn-outline-primary ms-1" title="Editar en editor">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a href="{{ url_for('encuestas.preview', id=e.id) }}"
+                           class="btn btn-sm btn-outline-secondary ms-1" title="Previsualizar">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        <form method="POST" action="{{ url_for('encuestas.eliminar', id=e.id) }}" class="d-inline ms-1">
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                    data-confirm="Eliminar la encuesta '{{ e.titulo }}'? Se perderan todas sus preguntas."
+                                    title="Eliminar">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+        <i class="bi bi-clipboard" style="font-size:2.5rem;opacity:0.3;"></i>
+        <p class="mt-2 mb-0">No hay encuestas registradas.</p>
+        <a href="{{ url_for('encuestas.crear') }}" class="btn btn-sm btn-primary mt-3">
+            <i class="bi bi-plus-lg me-1"></i>Crear encuesta
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Plantillas disponibles -->
+{% if plantillas %}
+<div class="tabla-panel">
+    <div class="tabla-header">
+        <h6><i class="bi bi-files me-2"></i>Plantillas disponibles</h6>
+    </div>
+    <div class="p-3">
+        <div class="row g-2">
+            {% for p in plantillas %}
+            <div class="col-sm-6 col-md-4">
+                <div class="border rounded p-3 d-flex justify-content-between align-items-center"
+                     style="background:#f8f9fa;">
+                    <div>
+                        <div class="fw-semibold" style="font-size:0.875rem;">{{ p.nombre_plantilla or p.titulo }}</div>
+                        <div class="text-muted" style="font-size:0.75rem;">{{ p.preguntas | length }} preguntas</div>
+                    </div>
+                    <a href="{{ url_for('encuestas.crear') }}?plantilla={{ p.id }}"
+                       class="btn btn-sm btn-outline-primary">Usar</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+

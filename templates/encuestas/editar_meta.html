@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Editar Encuesta{% endblock %}
+{% block breadcrumb %}
+    <a href="{{ url_for('encuestas.listar') }}" class="text-decoration-none text-muted">Encuestas</a>
+    <i class="bi bi-chevron-right mx-1 text-muted" style="font-size:0.75rem;"></i>Editar datos
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h5 class="fw-bold mb-0" style="color:var(--color-primario);">Editar datos de la encuesta</h5>
+</div>
+
+<div class="form-panel">
+    <form method="POST">
+        <div class="row g-3">
+            <div class="col-12">
+                <label class="form-label">Titulo <span class="text-danger">*</span></label>
+                <input type="text" name="titulo" class="form-control"
+                       value="{{ encuesta.titulo }}" required>
+            </div>
+            <div class="col-12">
+                <label class="form-label">Descripcion</label>
+                <textarea name="descripcion" class="form-control" rows="2">{{ encuesta.descripcion or '' }}</textarea>
+            </div>
+            <div class="col-sm-6">
+                <label class="form-label">Proyecto vinculado</label>
+                <select name="proyecto_id" class="form-select">
+                    <option value="">Sin vincular</option>
+                    {% for p in proyectos %}
+                    <option value="{{ p.id }}" {{ 'selected' if encuesta.proyecto_id == p.id else '' }}>
+                        {{ p.nombre }} ({{ p.anio }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" name="anonima"
+                           value="1" id="switchAnonima" {{ 'checked' if encuesta.anonima else '' }}>
+                    <label class="form-check-label" for="switchAnonima">Respuestas anonimas</label>
+                </div>
+            </div>
+        </div>
+        <hr class="my-4">
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm px-4">
+                <i class="bi bi-floppy me-1"></i>Guardar
+            </button>
+            <a href="{{ url_for('encuestas.editor', id=encuesta.id) }}" class="btn btn-outline-secondary btn-sm">
+                Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

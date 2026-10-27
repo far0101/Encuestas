@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ encuesta.titulo }} - Encuesta</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/custom.css') }}" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f0f2f5;
+        }
+        .formulario-header {
+            background: #ffffff;
+            border-bottom: 2px solid #e2e8f0;
+            padding: 1.5rem 0;
+            margin-bottom: 2rem;
+        }
+        .tarjeta-pregunta {
+            background: #ffffff;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            padding: 1.5rem;
+            margin-bottom: 1.25rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            transition: border-color 0.15s ease-in-out;
+        }
+        .tarjeta-pregunta:focus-within {
+            border-color: #2c6fad;
+        }
+    </style>
+</head>
+<body>
+
+<header class="formulario-header shadow-sm">
+    <div class="container" style="max-width: 760px;">
+        <div class="d-flex align-items-center justify-content-between">
+            <span class="fw-bold text-uppercase" style="color:var(--color-primario); letter-spacing:1px; font-size:0.85rem;">
+                Sistema de Gestion de Proyectos
+            </span>
+            {% if encuesta.proyecto %}
+            <span class="badge bg-light text-secondary border">
+                Proyecto: {{ encuesta.proyecto.nombre }}
+            </span>
+            {% endif %}
+        </div>
+    </div>
+</header>
+
+<main class="container mb-5" style="max-width: 760px;">
+
+    <!-- Alertas Flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endwith %}
+
+    <!-- Encabezado de Encuesta -->
+    <div class="tarjeta-pregunta border-top border-4 border-primary">
+        <h3 class="fw-bold mb-2" style="color:var(--color-primario);">{{ encuesta.titulo }}</h3>
+        {% if encuesta.descripcion %}
+        <p class="text-muted mb-3" style="font-size:0.95rem; white-space:pre-line;">{{ encuesta.descripcion }}</p>
+        {% endif %}
+
+        <div class="d-flex flex-wrap gap-3 pt-2 border-top text-muted" style="font-size:0.8rem;">
+            {% if encuesta.anonima %}
+            <span class="text-success fw-semibold">
+                <i class="bi bi-shield-check me-1"></i>Esta encuesta es completamente anonima
+            </span>
+            {% else %}
+            <span>
+                <i class="bi bi-person me-1"></i>
+                {% if distribucion and distribucion.destinatario_nombre %}
+                    Respondiendo como: <strong>{{ distribucion.destinatario_nombre }}</strong>
+                {% else %}
+                    Encuesta con identificacion de participante
+                {% endif %}
+            </span>
+            {% endif %}
+            <span>
+                <i class="bi bi-card-checklist me-1"></i>{{ preguntas | length }} preguntas
+            </span>
+        </div>
+    </div>
+
+    <!-- Formulario de Respuestas -->
+    <form method="POST" id="formEncuesta">
+
+        {% if not encuesta.anonima and es_publica %}
+        <!-- Datos de Identificacion en Enlace Publico -->
+        <div class="tarjeta-pregunta">
+            <h6 class="fw-bold mb-3" style="color:var(--color-primario);">Datos de Identificacion</h6>
+            <div class="row g-3">
+                <div class="col-sm-6">
+                    <label class="form-label">Nombre y Apellido</label>
+                    <input type="text" name="respondente_nombre" class="form-control form-control-sm" placeholder="Opcional">
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label">Correo Electronico</label>
+                    <input type="email" name="respondente_email" class="form-control form-control-sm" placeholder="Opcional">
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Listado de Preguntas -->
+        {% for p in preguntas %}
+        <div class="tarjeta-pregunta item-pregunta" id="pregunta-box-{{ p.id }}" data-pregunta-id="{{ p.id }}">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <label class="fw-semibold mb-0" style="font-size:0.95rem;">
+                    {{ loop.index }}. {{ p.texto }}
+                    {% if p.obligatoria %}<span class="text-danger ms-1" title="Obligatoria">*</span>{% endif %}
+                </label>
+            </div>
+
+            {% if p.tipo == 'texto_corto' %}
+                <input type="text" name="pregunta_{{ p.id }}" class="form-control"
+                       placeholder="Escriba su respuesta..." {% if p.obligatoria %}required{% endif %}>
+
+            {% elif p.tipo == 'texto_largo' %}
+                <textarea name="pregunta_{{ p.id }}" class="form-control" rows="3"
+                          placeholder="Escriba su respuesta detallada..." {% if p.obligatoria %}required{% endif %}></textarea>
+
+            {% elif p.tipo == 'opcion_multiple' %}
+                <div class="opciones-lista">
+                    {% for op in p.opciones_parsed %}
+                    <div class="form-check mb-2">
+                        <input class="form-check-input input-condicional" type="radio"
+                               name="pregunta_{{ p.id }}"
+                               value="{{ op }}"
+                               id="op-{{ p.id }}-{{ loop.index }}"
+                               data-pregunta-id="{{ p.id }}"
+                               {% if p.obligatoria %}required{% endif %}>
+                        <label class="form-check-label" for="op-{{ p.id }}-{{ loop.index }}">
+                            {{ op }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+
+            {% elif p.tipo == 'checkboxes' %}
+                <div class="opciones-lista">
+                    {% for op in p.opciones_parsed %}
+                    <div class="form-check mb-2">
+                        <input class="form-check-input input-condicional" type="checkbox"
+                               name="pregunta_{{ p.id }}"
+                               value="{{ op }}"
+                               id="cb-{{ p.id }}-{{ loop.index }}"
+                               data-pregunta-id="{{ p.id }}">
+                        <label class="form-check-label" for="cb-{{ p.id }}-{{ loop.index }}">
+                            {{ op }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+
+            {% elif p.tipo == 'desplegable' %}
+                <select name="pregunta_{{ p.id }}" class="form-select input-condicional"
+                        data-pregunta-id="{{ p.id }}" {% if p.obligatoria %}required{% endif %}>
+                    <option value="">Seleccione una opcion...</option>
+                    {% for op in p.opciones_parsed %}
+                    <option value="{{ op }}">{{ op }}</option>
+                    {% endfor %}
+                </select>
+
+            {% elif p.tipo == 'likert' %}
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-2 pb-1">
+                    <span class="text-muted small fw-semibold">Bajo ({{ p.escala_min }})</span>
+                    <div class="d-flex gap-3">
+                        {% for i in range(p.escala_min, p.escala_max + 1) %}
+                        <div class="form-check text-center">
+                            <input class="form-check-input input-condicional d-block mx-auto mb-1"
+                                   type="radio"
+                                   name="pregunta_{{ p.id }}"
+                                   value="{{ i }}"
+                                   id="lik-{{ p.id }}-{{ i }}"
+                                   data-pregunta-id="{{ p.id }}"
+                                   {% if p.obligatoria %}required{% endif %}>
+                            <label class="form-check-label small" for="lik-{{ p.id }}-{{ i }}">{{ i }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <span class="text-muted small fw-semibold">Alto ({{ p.escala_max }})</span>
+                </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <!-- Boton de Envio -->
+        <div class="d-grid mt-4">
+            <button type="submit" class="btn btn-primary btn-lg shadow-sm">
+                <i class="bi bi-send me-2"></i>Enviar Respuestas
+            </button>
+        </div>
+    </form>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Evaluacion dinamica de logica condicional en tiempo real
+const REGLAS = {{ reglas_json | safe }};
+
+function evaluarCondiciones() {
+    // Para cada regla, evaluar si el valor actual coincide
+    REGLAS.forEach(r => {
+        const destBox = document.getElementById(`pregunta-box-${r.pregunta_destino_id}`);
+        if (!destBox) return;
+
+        // Determinar valor actual del elemento de origen
+        let valorSeleccionado = '';
+        const radios = document.querySelectorAll(`input[name="pregunta_${r.pregunta_origen_id}"]:checked`);
+        if (radios.length > 0) {
+            valorSeleccionado = radios[0].value;
+        } else {
+            const select = document.querySelector(`select[name="pregunta_${r.pregunta_origen_id}"]`);
+            if (select) {
+                valorSeleccionado = select.value;
+            }
+        }
+
+        const coincide = (valorSeleccionado === r.valor_condicion);
+        if (coincide) {
+            if (r.accion === 'mostrar') {
+                destBox.style.display = '';
+                destBox.querySelectorAll('input, select, textarea').forEach(el => el.disabled = false);
+            } else if (r.accion === 'ocultar') {
+                destBox.style.display = 'none';
+                destBox.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+            }
+        } else {
+            // Revertir a estado original
+            if (r.accion === 'mostrar') {
+                destBox.style.display = 'none';
+                destBox.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+            } else if (r.accion === 'ocultar') {
+                destBox.style.display = '';
+                destBox.querySelectorAll('input, select, textarea').forEach(el => el.disabled = false);
+            }
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar estado: ocultar preguntas cuyo target tiene regla de mostrar
+    const targetsAMostrar = new Set(
+        REGLAS.filter(r => r.accion === 'mostrar').map(r => r.pregunta_destino_id)
+    );
+    targetsAMostrar.forEach(id => {
+        const box = document.getElementById(`pregunta-box-${id}`);
+        if (box) {
+            box.style.display = 'none';
+            box.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+        }
+    });
+
+    // Escuchar eventos change en todos los inputs condicionales
+    document.querySelectorAll('.input-condicional').forEach(elem => {
+        elem.addEventListener('change', evaluarCondiciones);
+    });
+
+    evaluarCondiciones();
+});
+</script>
+
+</body>
+</html>
+

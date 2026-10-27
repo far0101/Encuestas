@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Proyectos{% endblock %}
+{% block breadcrumb %}Proyectos{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h5 class="fw-bold mb-0" style="color: var(--color-primario);">Proyectos</h5>
+        <p class="text-muted mb-0" style="font-size:0.85rem;">ABM de proyectos de 7mo ano.</p>
+    </div>
+    <a href="{{ url_for('proyectos.crear') }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>Nuevo proyecto
+    </a>
+</div>
+
+<!-- Filtros -->
+<div class="tabla-panel mb-4">
+    <div class="tabla-header">
+        <h6>Filtrar</h6>
+    </div>
+    <div class="p-3">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-sm-4">
+                <label class="form-label">Estado</label>
+                <select name="estado" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    <option value="activo" {% if estado_filtro == 'activo' %}selected{% endif %}>Activo</option>
+                    <option value="finalizado" {% if estado_filtro == 'finalizado' %}selected{% endif %}>Finalizado</option>
+                    <option value="suspendido" {% if estado_filtro == 'suspendido' %}selected{% endif %}>Suspendido</option>
+                </select>
+            </div>
+            <div class="col-sm-4">
+                <label class="form-label">Ano</label>
+                <select name="anio" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    {% for a in anios %}
+                    <option value="{{ a }}" {% if anio_filtro == a|string %}selected{% endif %}>{{ a }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-sm-4 d-flex gap-2">
+                <button type="submit" class="btn btn-sm btn-primary">
+                    <i class="bi bi-funnel me-1"></i>Aplicar
+                </button>
+                <a href="{{ url_for('proyectos.listar') }}" class="btn btn-sm btn-outline-secondary">Limpiar</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tabla de proyectos -->
+<div class="tabla-panel">
+    <div class="tabla-header">
+        <h6>{{ proyectos | length }} proyecto(s) encontrado(s)</h6>
+    </div>
+    {% if proyectos %}
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Nombre</th>
+                    <th>Ano</th>
+                    <th>Estado</th>
+                    <th>Responsables</th>
+                    <th>Inicio</th>
+                    <th>Fin estimado</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in proyectos %}
+                <tr>
+                    <td class="text-muted">{{ p.id }}</td>
+                    <td>
+                        <a href="{{ url_for('proyectos.detalle', id=p.id) }}"
+                           class="text-decoration-none fw-semibold">{{ p.nombre }}</a>
+                    </td>
+                    <td>{{ p.anio }}</td>
+                    <td><span class="badge-{{ p.estado }}">{{ p.estado | capitalize }}</span></td>
+                    <td>
+                        {% if p.responsables %}
+                            {{ p.responsables | map(attribute='nombre') | join(', ') }}
+                        {% elif p.responsable %}
+                            {{ p.responsable.nombre }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>{{ p.fecha_inicio.strftime('%d/%m/%Y') }}</td>
+                    <td>{{ p.fecha_fin.strftime('%d/%m/%Y') if p.fecha_fin else '-' }}</td>
+                    <td class="text-end">
+                        <a href="{{ url_for('proyectos.detalle', id=p.id) }}"
+                           class="btn btn-sm btn-outline-secondary" title="Ver detalle">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        <a href="{{ url_for('proyectos.editar', id=p.id) }}"
+                           class="btn btn-sm btn-outline-primary ms-1" title="Editar">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <form method="POST" action="{{ url_for('proyectos.eliminar', id=p.id) }}"
+                              class="d-inline ms-1">
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                    data-confirm="Estas seguro de eliminar el proyecto '{{ p.nombre }}'? Esta accion no se puede deshacer."
+                                    title="Eliminar">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+        <i class="bi bi-folder2-open" style="font-size:2.5rem; opacity:0.3;"></i>
+        <p class="mt-2 mb-0">No se encontraron proyectos con los filtros seleccionados.</p>
+        <a href="{{ url_for('proyectos.crear') }}" class="btn btn-sm btn-primary mt-3">
+            <i class="bi bi-plus-lg me-1"></i>Crear proyecto
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

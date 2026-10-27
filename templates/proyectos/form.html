@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}{{ accion }} Proyecto{% endblock %}
+{% block breadcrumb %}
+    <a href="{{ url_for('proyectos.listar') }}" class="text-decoration-none text-muted">Proyectos</a>
+    <i class="bi bi-chevron-right mx-1 text-muted" style="font-size:0.75rem;"></i>
+    {{ accion }} Proyecto
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h5 class="fw-bold mb-0" style="color: var(--color-primario);">{{ accion }} Proyecto</h5>
+    <p class="text-muted mb-0" style="font-size:0.85rem;">
+        {% if accion == 'Crear' %}Complete los datos para registrar un nuevo proyecto.
+        {% else %}Modifique los campos necesarios y guarde los cambios.{% endif %}
+    </p>
+</div>
+
+<div class="form-panel">
+    <form method="POST">
+        <div class="row g-3">
+
+            <div class="col-12">
+                <label class="form-label">Nombre del Proyecto <span class="text-danger">*</span></label>
+                <input type="text" name="nombre" class="form-control"
+                       placeholder="Ej: Sistema de gestion de inventario"
+                       value="{{ proyecto.nombre if proyecto else '' }}" required>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label">Descripcion</label>
+                <textarea name="descripcion" class="form-control" rows="3"
+                          placeholder="Descripcion breve del proyecto...">{{ proyecto.descripcion if proyecto else '' }}</textarea>
+            </div>
+
+            <div class="col-sm-6">
+                <label class="form-label">Ano lectivo <span class="text-danger">*</span></label>
+                <input type="number" name="anio" class="form-control"
+                       placeholder="Ej: 2026" min="2020" max="2035"
+                       value="{{ proyecto.anio if proyecto else '' }}" required>
+            </div>
+
+            <div class="col-sm-6">
+                <label class="form-label">Estado <span class="text-danger">*</span></label>
+                <select name="estado" class="form-select">
+                    <option value="activo" {% if proyecto and proyecto.estado == 'activo' %}selected{% endif %}>Activo</option>
+                    <option value="finalizado" {% if proyecto and proyecto.estado == 'finalizado' %}selected{% endif %}>Finalizado</option>
+                    <option value="suspendido" {% if proyecto and proyecto.estado == 'suspendido' %}selected{% endif %}>Suspendido</option>
+                </select>
+            </div>
+
+            <div class="col-sm-6">
+                <label class="form-label">Fecha de inicio <span class="text-danger">*</span></label>
+                <input type="date" name="fecha_inicio" class="form-control"
+                       value="{{ proyecto.fecha_inicio.isoformat() if proyecto and proyecto.fecha_inicio else '' }}"
+                       required>
+            </div>
+
+            <div class="col-sm-6">
+                <label class="form-label">Fecha estimada de fin</label>
+                <input type="date" name="fecha_fin" class="form-control"
+                       value="{{ proyecto.fecha_fin.isoformat() if proyecto and proyecto.fecha_fin else '' }}">
+            </div>
+
+            <div class="col-12">
+                <label class="form-label">Responsables asignados (puede seleccionar uno o varios)</label>
+                {% if responsables %}
+                <div class="border rounded p-3 bg-white" style="max-height: 200px; overflow-y: auto;">
+                    <div class="row g-2">
+                        {% for r in responsables %}
+                        <div class="col-sm-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="responsable_ids" value="{{ r.id }}"
+                                       id="resp_{{ r.id }}"
+                                       {% if proyecto and (r in proyecto.responsables or proyecto.responsable_id == r.id) %}checked{% endif %}>
+                                <label class="form-check-label" for="resp_{{ r.id }}">
+                                    <strong>{{ r.nombre }}</strong> <span class="text-muted small">({{ r.rol }})</span>
+                                </label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="form-text text-warning border rounded p-2">
+                    <i class="bi bi-exclamation-circle me-1"></i>
+                    No hay responsables registrados.
+                    <a href="{{ url_for('responsables.crear') }}">Crear uno ahora</a>.
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
+
+        <hr class="my-4">
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm px-4">
+                <i class="bi bi-floppy me-1"></i>Guardar
+            </button>
+            <a href="{{ url_for('proyectos.listar') }}" class="btn btn-outline-secondary btn-sm">
+                Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

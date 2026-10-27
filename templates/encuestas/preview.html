@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Preview - {{ encuesta.titulo }}{% endblock %}
+{% block breadcrumb %}
+    <a href="{{ url_for('encuestas.listar') }}" class="text-decoration-none text-muted">Encuestas</a>
+    <i class="bi bi-chevron-right mx-1 text-muted" style="font-size:0.75rem;"></i>
+    <a href="{{ url_for('encuestas.editor', id=encuesta.id) }}" class="text-decoration-none text-muted">Editor</a>
+    <i class="bi bi-chevron-right mx-1 text-muted" style="font-size:0.75rem;"></i>
+    Previsualizacion
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h5 class="fw-bold mb-0" style="color:var(--color-primario);">Previsualizacion</h5>
+        <small class="text-muted">Asi veran la encuesta los respondentes. Las respuestas no se guardan en esta vista.</small>
+    </div>
+    <a href="{{ url_for('encuestas.editor', id=encuesta.id) }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Volver al editor
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="detalle-card mb-4">
+            <h4 class="fw-bold mb-1">{{ encuesta.titulo }}</h4>
+            {% if encuesta.descripcion %}
+            <p class="text-muted mb-2">{{ encuesta.descripcion }}</p>
+            {% endif %}
+            <div class="d-flex gap-3" style="font-size:0.8rem;">
+                {% if encuesta.anonima %}
+                <span class="text-success"><i class="bi bi-shield-check me-1"></i>Respuesta anonima</span>
+                {% else %}
+                <span class="text-muted"><i class="bi bi-person me-1"></i>Se registra identidad</span>
+                {% endif %}
+                {% if encuesta.proyecto %}
+                <span class="text-muted"><i class="bi bi-folder2-open me-1"></i>{{ encuesta.proyecto.nombre }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Preguntas -->
+        {% for p in preguntas %}
+        <div class="detalle-card mb-3 pregunta-preview" id="preg-{{ p.id }}"
+             style="{% if loop.index > 1 %}{% endif %}">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <label class="fw-semibold mb-0" style="font-size:0.95rem;">
+                    {{ loop.index }}. {{ p.texto or '(Sin texto)' }}
+                    {% if p.obligatoria %}<span class="text-danger ms-1">*</span>{% endif %}
+                </label>
+                <span class="badge bg-light text-secondary border ms-2" style="font-size:0.7rem; white-space:nowrap;">
+                    {{ p.tipo | replace('_', ' ') | title }}
+                </span>
+            </div>
+
+            {% if p.tipo == 'texto_corto' %}
+                <input type="text" class="form-control" placeholder="Respuesta corta..." disabled>
+
+            {% elif p.tipo == 'texto_largo' %}
+                <textarea class="form-control" rows="3" placeholder="Respuesta larga..." disabled></textarea>
+
+            {% elif p.tipo == 'opcion_multiple' %}
+                {% for op in p.opciones_parsed %}
+                <div class="form-check mb-1">
+                    <input class="form-check-input" type="radio" name="preg-{{ p.id }}"
+                           value="{{ op }}" id="op-{{ p.id }}-{{ loop.index }}"
+                           onchange="evaluarReglas({{ p.id }}, this.value)">
+                    <label class="form-check-label" for="op-{{ p.id }}-{{ loop.index }}">{{ op }}</label>
+                </div>
+                {% endfor %}
+
+            {% elif p.tipo == 'checkboxes' %}
+                {% for op in p.opciones_parsed %}
+                <div class="form-check mb-1">
+                    <input class="form-check-input" type="checkbox" value="{{ op }}"
+                           id="cb-{{ p.id }}-{{ loop.index }}"
+                           onchange="evaluarReglas({{ p.id }}, this.value)">
+                    <label class="form-check-label" for="cb-{{ p.id }}-{{ loop.index }}">{{ op }}</label>
+                </div>
+                {% endfor %}
+
+            {% elif p.tipo == 'desplegable' %}
+                <select class="form-select" onchange="evaluarReglas({{ p.id }}, this.value)">
+                    <option value="">Seleccionar...</option>
+                    {% for op in p.opciones_parsed %}
+                    <option value="{{ op }}">{{ op }}</option>
+                    {% endfor %}
+                </select>
+
+            {% elif p.tipo == 'likert' %}
+                <div class="d-flex gap-2 flex-wrap align-items-center mt-2">
+                    <small class="text-muted">{{ p.escala_min }}</small>
+                    {% for i in range(p.escala_min, p.escala_max + 1) %}
+                    <div class="form-check form-check-inline mb-0">
+                        <input class="form-check-input" type="radio" name="likert-{{ p.id }}"
+                               value="{{ i }}" id="lik-{{ p.id }}-{{ i }}"
+                               onchange="evaluarReglas({{ p.id }}, this.value)">
+                        <label class="form-check-label" for="lik-{{ p.id }}-{{ i }}">{{ i }}</label>
+                    </div>
+                    {% endfor %}
+                    <small class="text-muted">{{ p.escala_max }}</small>
+                </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        {% if not preguntas %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-clipboard" style="font-size:2.5rem;opacity:0.3;"></i>
+            <p class="mt-2">Esta encuesta no tiene preguntas aun.</p>
+            <a href="{{ url_for('encuestas.editor', id=encuesta.id) }}" class="btn btn-sm btn-primary">Ir al editor</a>
+        </div>
+        {% else %}
+        <div class="text-center mt-4 mb-2">
+            <button class="btn btn-primary" disabled>Enviar respuesta (vista previa)</button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const REGLAS = {{ reglas_json | safe }};
+
+function evaluarReglas(preguntaOrigenId, valor) {
+    REGLAS.forEach(r => {
+        if (r.pregunta_origen_id === preguntaOrigenId) {
+            const destEl = document.getElementById(`preg-${r.pregunta_destino_id}`);
+            if (!destEl) return;
+
+            if (valor === r.valor_condicion) {
+                destEl.style.display = r.accion === 'mostrar' ? '' : 'none';
+            }
+        }
+    });
+}
+
+// Aplicar estado inicial: ocultar los que tienen regla de mostrar
+document.addEventListener('DOMContentLoaded', function() {
+    const mostrarIds = new Set(
+        REGLAS.filter(r => r.accion === 'mostrar').map(r => r.pregunta_destino_id)
+    );
+    mostrarIds.forEach(id => {
+        const el = document.getElementById(`preg-${id}`);
+        if (el) el.style.display = 'none';
+    });
+});
+</script>
+{% endblock %}
+

@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block breadcrumb %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h5 class="fw-bold mb-0" style="color: var(--color-primario);">Resumen general</h5>
+    <p class="text-muted mb-0" style="font-size:0.85rem;">Vista rapida del estado del sistema.</p>
+</div>
+
+<!-- Estadisticas -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#e8f0fe;">
+                <i class="bi bi-folder2-open" style="color:#1a3a5c;"></i>
+            </div>
+            <div>
+                <div class="stat-value">{{ total_proyectos }}</div>
+                <div class="stat-label">Total proyectos</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#d1fae5;">
+                <i class="bi bi-check-circle" style="color:#065f46;"></i>
+            </div>
+            <div>
+                <div class="stat-value">{{ activos }}</div>
+                <div class="stat-label">Activos</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#dbeafe;">
+                <i class="bi bi-archive" style="color:#1e40af;"></i>
+            </div>
+            <div>
+                <div class="stat-value">{{ finalizados }}</div>
+                <div class="stat-label">Finalizados</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#f3f4f6;">
+                <i class="bi bi-people" style="color:#374151;"></i>
+            </div>
+            <div>
+                <div class="stat-value">{{ total_responsables }}</div>
+                <div class="stat-label">Responsables</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ultimos proyectos -->
+<div class="tabla-panel">
+    <div class="tabla-header">
+        <h6>Ultimos proyectos registrados</h6>
+        <a href="{{ url_for('proyectos.listar') }}" class="btn btn-sm btn-outline-secondary">
+            Ver todos
+        </a>
+    </div>
+    {% if ultimos %}
+    <table class="table table-hover mb-0">
+        <thead class="table-light">
+            <tr>
+                <th>Nombre</th>
+                <th>Ano</th>
+                <th>Estado</th>
+                <th>Responsables</th>
+                <th>Inicio</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in ultimos %}
+            <tr>
+                <td>
+                    <a href="{{ url_for('proyectos.detalle', id=p.id) }}"
+                       class="text-decoration-none fw-semibold">{{ p.nombre }}</a>
+                </td>
+                <td>{{ p.anio }}</td>
+                <td>
+                    <span class="badge-{{ p.estado }}">{{ p.estado | capitalize }}</span>
+                </td>
+                <td>
+                    {% if p.responsables %}
+                        {{ p.responsables | map(attribute='nombre') | join(', ') }}
+                    {% elif p.responsable %}
+                        {{ p.responsable.nombre }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>{{ p.fecha_inicio.strftime('%d/%m/%Y') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+        <i class="bi bi-inbox" style="font-size:2rem;"></i>
+        <p class="mt-2 mb-0">No hay proyectos registrados aun.</p>
+        <a href="{{ url_for('proyectos.crear') }}" class="btn btn-sm btn-primary mt-3">Crear primer proyecto</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

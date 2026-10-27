@@ -1,0 +1,269 @@
+/* static/css/custom.css */
+
+:root {
+    --color-primario: #1a3a5c;
+    --color-secundario: #2c6fad;
+    --color-acento: #e8f0fe;
+    --color-texto: #212529;
+    --color-borde: #dee2e6;
+}
+
+body {
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background-color: #f4f6f9;
+    color: var(--color-texto);
+}
+
+/* ---- Sidebar ---- */
+.sidebar {
+    width: 240px;
+    min-height: 100vh;
+    background-color: var(--color-primario);
+    position: fixed;
+    top: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+}
+
+.sidebar-brand {
+    padding: 1.5rem 1.2rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-brand h5 {
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin: 0;
+    letter-spacing: 0.3px;
+}
+
+.sidebar-brand small {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.72rem;
+}
+
+.sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.75);
+    padding: 0.65rem 1.2rem;
+    font-size: 0.875rem;
+    border-left: 3px solid transparent;
+    transition: all 0.15s;
+}
+
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.08);
+    border-left-color: #5b9bd5;
+}
+
+.sidebar .nav-section {
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 1rem 1.2rem 0.3rem;
+}
+
+/* ---- Contenido principal ---- */
+.main-content {
+    margin-left: 240px;
+    padding: 2rem;
+    min-height: 100vh;
+}
+
+/* ---- Topbar ---- */
+.topbar {
+    background: #ffffff;
+    border-bottom: 1px solid var(--color-borde);
+    padding: 0.75rem 2rem;
+    margin-left: 240px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+.topbar h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-primario);
+    margin: 0;
+}
+
+/* ---- Cards de estadisticas ---- */
+.stat-card {
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid var(--color-borde);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.stat-card .stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+}
+
+.stat-card .stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--color-primario);
+}
+
+.stat-card .stat-label {
+    font-size: 0.78rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ---- Tabla ---- */
+.tabla-panel {
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid var(--color-borde);
+    overflow: hidden;
+}
+
+.tabla-panel .tabla-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--color-borde);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tabla-panel .tabla-header h6 {
+    margin: 0;
+    font-weight: 600;
+    color: var(--color-primario);
+}
+
+.table th {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6c757d;
+    font-weight: 600;
+    border-bottom-width: 1px;
+}
+
+.table td {
+    vertical-align: middle;
+    font-size: 0.875rem;
+}
+
+/* ---- Badges de estado ---- */
+.badge-activo {
+    background-color: #d1fae5;
+    color: #065f46;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.3em 0.7em;
+    border-radius: 999px;
+}
+
+.badge-finalizado {
+    background-color: #dbeafe;
+    color: #1e40af;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.3em 0.7em;
+    border-radius: 999px;
+}
+
+.badge-suspendido {
+    background-color: #fee2e2;
+    color: #991b1b;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.3em 0.7em;
+    border-radius: 999px;
+}
+
+/* ---- Formularios ---- */
+.form-panel {
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid var(--color-borde);
+    padding: 2rem;
+    max-width: 680px;
+}
+
+.form-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.3rem;
+}
+
+.form-control,
+.form-select {
+    font-size: 0.875rem;
+    border-color: #ced4da;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--color-secundario);
+    box-shadow: 0 0 0 3px rgba(44, 111, 173, 0.12);
+}
+
+/* ---- Boton primario ---- */
+.btn-primary {
+    background-color: var(--color-secundario);
+    border-color: var(--color-secundario);
+}
+
+.btn-primary:hover {
+    background-color: #235d96;
+    border-color: #235d96;
+}
+
+/* ---- Alertas flash ---- */
+.flash-container {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1050;
+    min-width: 300px;
+}
+
+/* ---- Detalle proyecto ---- */
+.detalle-card {
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid var(--color-borde);
+    padding: 2rem;
+}
+
+.detalle-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6c757d;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+}
+
+.detalle-value {
+    font-size: 0.95rem;
+    color: var(--color-texto);
+}
+
+.modal-confirm .modal-header {
+    background-color: #fff5f5;
+    border-bottom-color: #fecaca;
+}
+
